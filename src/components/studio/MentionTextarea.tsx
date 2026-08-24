@@ -1,6 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import { X } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ReferenceImage } from "@/lib/studio/types";
 
@@ -13,18 +11,25 @@ type Props = {
   className?: string;
 };
 
-/** Textarea with an "@" mention popup listing uploaded reference images. */
-export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function MentionTextarea(
+/**
+ * Rich prompt input: tags typed with "@" become inline chips showing a
+ * thumbnail of the referenced image (CapCut-style), while the serialized
+ * value stays plain text with the original @tags.
+ */
+export const MentionTextarea = forwardRef<HTMLDivElement, Props>(function MentionTextarea(
   { id, value, onChange, references, placeholder, className },
   ref,
 ) {
-  const innerRef = useRef<HTMLTextAreaElement>(null);
-  useImperativeHandle(ref, () => innerRef.current as HTMLTextAreaElement);
+  const editorRef = useRef<HTMLDivElement>(null);
+  useImperativeHandle(ref, () => editorRef.current as HTMLDivElement);
+  const refsRef = useRef(references);
+  refsRef.current = references;
+  const lastValue = useRef<string>("");
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [anchor, setAnchor] = useState(0); // index of the "@"
   const [active, setActive] = useState(0);
+  const [empty, setEmpty] = useState(!value);
 
   const matches = open
     ? references.filter((r) =>
@@ -32,67 +37,150 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
       )
     : [];
 
-  function syncMention(text: string, caret: number) {
-    const before = text.slice(0, caret);
+  /* ---------- DOM <-> string ---------- */
+
+  const makeChip = useCallback((r: ReferenceImage) => {
+    const chip = document.createElement("span");
+    chip.contentEditable = "false";
+    chip.dataset["tag"] = r.tag;
+    chip.title = r.name;
+    chip.className =
+      "mx-0.5 inline-flex max-w-52 select-none items-center gap-1.5 rounded-md border border-border bg-muted/70 py-0.5 pl-0.5 pr-1.5 align-middle text-xs font-medium";
+    const img = document.createElement("img");
+    img.src = r.previewUrl;
+    img.alt = r.name;
+    img.className = "size-5 shrink-0 rounded object-cover";
+    const label = document.createElement("span");
+    label.className = "truncate";
+    label.textContent = r.tag.replace(/^@/, "");
+    chip.append(img, label);
+    return chip;
+  }, []);
+
+  const serialize = useCallback((root: HTMLElement) => {
+    let out = "";
+    root.childNodes.forEach(function walk(node) {
+      if (node.nodeType === Node.TEXT_NODE) out += node.nodeValue ?? "";
+      else if (node instanceof HTMLElement) {
+        if (node.dataset["tag"]) out += node.dataset["tag"];
+        else if (node.tagName === "BR") out += "\n";
+        else {
+          if (node.tagName === "DIV" && out !== "") out += "\n";
+          node.childNodes.forEach(walk);
+        }
+      }
+    });
+    return out;
+  }, []);
+
+  const render = useCallback(
+    (text: string) => {
+      const root = editorRef.current;
+      if (!root) return;
+      root.textContent = "";
+      const tags = refsRef.current.map((r) => r.tag).sort((a, b) => b.length - a.length);
+      const escaped = tags.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      const re = escaped.length ? new RegExp(`(${escaped.join("|")})`, "g") : null;
+      const parts = re ? text.split(re) : [text];
+      for (const part of parts) {
+        if (!part) continue;
+        const found = refsRef.current.find((r) => r.tag === part);
+        if (found) root.appendChild(makeChip(found));
+        else
+          part.split("\n").forEach((line, i) => {
+            if (i > 0) root.appendChild(document.createElement("br"));
+            if (line) root.appendChild(document.createTextNode(line));
+          });
+      }
+    },
+    [makeChip],
+  );
+
+  // sync when the value changes from outside (or references arrive later)
+  useEffect(() => {
+    if (value === lastValue.current && editorRef.current?.childNodes.length) return;
+    lastValue.current = value;
+    render(value);
+    setEmpty(!value);
+  }, [value, references, render]);
+
+  /* ---------- editing ---------- */
+
+  function emit() {
+    const root = editorRef.current;
+    if (!root) return "";
+    const text = serialize(root);
+    lastValue.current = text;
+    setEmpty(text.trim() === "");
+    onChange(text);
+    return text;
+  }
+
+  function syncMention() {
+    const sel = window.getSelection();
+    const node = sel?.anchorNode;
+    if (!sel || !node || node.nodeType !== Node.TEXT_NODE) return setOpen(false);
+    const before = (node.nodeValue ?? "").slice(0, sel.anchorOffset);
     const at = before.lastIndexOf("@");
     if (at === -1) return setOpen(false);
     const between = before.slice(at + 1);
-    // stop when the token contains whitespace, or "@" isn't at a word start
-    const prevChar = at > 0 ? before[at - 1] : " ";
-    if (/\s/.test(between) || !/[\s(]|^$/.test(prevChar ?? " ")) return setOpen(false);
-    setAnchor(at);
+    const prev = at > 0 ? before[at - 1] : " ";
+    if (/\s/.test(between) || !/[\s(]|^$/.test(prev ?? " ")) return setOpen(false);
     setQuery(between);
     setActive(0);
     setOpen(true);
   }
 
-  function pick(tag: string) {
-    const el = innerRef.current;
-    const caret = el?.selectionStart ?? value.length;
-    const next = `${value.slice(0, anchor)}${tag} ${value.slice(caret)}`;
-    onChange(next);
+  function pick(r: ReferenceImage) {
+    const sel = window.getSelection();
+    const node = sel?.anchorNode;
+    if (!sel || !node || node.nodeType !== Node.TEXT_NODE) return;
+    const offset = sel.anchorOffset;
+    const text = node.nodeValue ?? "";
+    const at = text.slice(0, offset).lastIndexOf("@");
+    if (at === -1) return;
+
+    const textNode = node as Text;
+    const after = text.slice(offset);
+    textNode.nodeValue = text.slice(0, at);
+    const chip = makeChip(r);
+    const space = document.createTextNode(`\u00a0${after}`);
+    textNode.parentNode?.insertBefore(chip, textNode.nextSibling);
+    chip.parentNode?.insertBefore(space, chip.nextSibling);
+
+    const range = document.createRange();
+    range.setStart(space, 1);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    editorRef.current?.focus();
     setOpen(false);
-    requestAnimationFrame(() => {
-      const pos = anchor + tag.length + 1;
-      el?.focus();
-      el?.setSelectionRange(pos, pos);
-    });
-  }
-
-  // ảnh đang được nhắc tới trong prompt (theo thứ tự xuất hiện)
-  const tagged = references
-    .map((r) => ({ ref: r, at: value.indexOf(r.tag) }))
-    .filter((x) => x.at !== -1)
-    .sort((a, b) => a.at - b.at)
-    .map((x) => x.ref);
-
-  function removeTag(tag: string) {
-    onChange(
-      value
-        .replace(new RegExp(`\\s?${tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"), "")
-        .replace(/[ \t]{2,}/g, " ")
-        .trimStart(),
-    );
-    innerRef.current?.focus();
+    emit();
   }
 
   return (
     <div className="relative">
-      <Textarea
+      <div
         id={id}
-        ref={innerRef}
-        value={value}
-        placeholder={placeholder}
-        className={className}
-        onChange={(e) => {
-          onChange(e.target.value);
-          syncMention(e.target.value, e.target.selectionStart ?? e.target.value.length);
+        ref={editorRef}
+        role="textbox"
+        aria-multiline="true"
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        className={cn(
+          "w-full whitespace-pre-wrap break-words rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          empty &&
+            "before:pointer-events-none before:text-muted-foreground before:content-[attr(data-placeholder)]",
+          className,
+        )}
+        onInput={() => {
+          emit();
+          syncMention();
         }}
-        onClick={(e) => syncMention(value, e.currentTarget.selectionStart ?? 0)}
+        onClick={syncMention}
         onKeyUp={(e) => {
-          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-            syncMention(value, e.currentTarget.selectionStart ?? 0);
-          }
+          if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) syncMention();
         }}
         onKeyDown={(e) => {
           if (!open || matches.length === 0) return;
@@ -104,10 +192,15 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
             setActive((i) => (i - 1 + matches.length) % matches.length);
           } else if (e.key === "Enter" || e.key === "Tab") {
             e.preventDefault();
-            pick(matches[active]!.tag);
+            pick(matches[active]!);
           } else if (e.key === "Escape") {
             setOpen(false);
           }
+        }}
+        onPaste={(e) => {
+          e.preventDefault();
+          const text = e.clipboardData.getData("text/plain");
+          document.execCommand("insertText", false, text);
         }}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
       />
@@ -127,7 +220,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActive(i)}
-                onClick={() => pick(r.tag)}
+                onClick={() => pick(r)}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left",
                   i === active ? "bg-accent text-accent-foreground" : "hover:bg-accent/60",
@@ -145,34 +238,6 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
               </button>
             ))
           )}
-        </div>
-      )}
-
-      {tagged.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground">Đang tham chiếu:</span>
-          {tagged.map((r) => (
-            <span
-              key={r.id}
-              className="group flex items-center gap-1.5 rounded-full border border-border bg-muted/50 py-1 pl-1 pr-2"
-              title={r.name}
-            >
-              <img
-                src={r.previewUrl}
-                alt={r.name}
-                className="size-6 shrink-0 rounded-full object-cover"
-              />
-              <span className="max-w-32 truncate text-xs font-medium">{r.tag}</span>
-              <button
-                type="button"
-                onClick={() => removeTag(r.tag)}
-                aria-label={`Bỏ ${r.tag} khỏi prompt`}
-                className="text-muted-foreground transition-colors hover:text-destructive"
-              >
-                <X className="size-3" />
-              </button>
-            </span>
-          ))}
         </div>
       )}
     </div>
