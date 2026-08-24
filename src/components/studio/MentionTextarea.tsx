@@ -1,4 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ReferenceImage } from "@/lib/studio/types";
@@ -56,6 +57,23 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
       el?.focus();
       el?.setSelectionRange(pos, pos);
     });
+  }
+
+  // ảnh đang được nhắc tới trong prompt (theo thứ tự xuất hiện)
+  const tagged = references
+    .map((r) => ({ ref: r, at: value.indexOf(r.tag) }))
+    .filter((x) => x.at !== -1)
+    .sort((a, b) => a.at - b.at)
+    .map((x) => x.ref);
+
+  function removeTag(tag: string) {
+    onChange(
+      value
+        .replace(new RegExp(`\\s?${tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"), "")
+        .replace(/[ \t]{2,}/g, " ")
+        .trimStart(),
+    );
+    innerRef.current?.focus();
   }
 
   return (
@@ -127,6 +145,34 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
               </button>
             ))
           )}
+        </div>
+      )}
+
+      {tagged.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Đang tham chiếu:</span>
+          {tagged.map((r) => (
+            <span
+              key={r.id}
+              className="group flex items-center gap-1.5 rounded-full border border-border bg-muted/50 py-1 pl-1 pr-2"
+              title={r.name}
+            >
+              <img
+                src={r.previewUrl}
+                alt={r.name}
+                className="size-6 shrink-0 rounded-full object-cover"
+              />
+              <span className="max-w-32 truncate text-xs font-medium">{r.tag}</span>
+              <button
+                type="button"
+                onClick={() => removeTag(r.tag)}
+                aria-label={`Bỏ ${r.tag} khỏi prompt`}
+                className="text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
         </div>
       )}
     </div>
