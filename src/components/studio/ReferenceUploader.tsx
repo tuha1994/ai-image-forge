@@ -32,8 +32,8 @@ export function ReferenceUploader({ references, onChange, onInsertTag, hint }: P
     const next: ReferenceImage[] = [...references];
     for (const file of Array.from(files)) {
       if (!file.type.startsWith("image/")) continue;
-      if (file.size > 8 * 1024 * 1024) {
-        toast.error(`${file.name} lớn hơn 8MB`);
+      if (file.size > 40 * 1024 * 1024) {
+        toast.error(`${file.name} lớn hơn 40MB`);
         continue;
       }
       const { data, previewUrl } = await fileToReference(file);
