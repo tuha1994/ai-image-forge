@@ -1,4 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { ReferenceImage } from "@/lib/studio/types";
