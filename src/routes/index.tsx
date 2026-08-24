@@ -114,8 +114,8 @@ function StudioPage() {
   const [imageSettings, setImageSettings] = useState<ImageSettings>(DEFAULT_IMAGE_SETTINGS);
   const [videoSettings, setVideoSettings] = useState<VideoSettings>(DEFAULT_VIDEO_SETTINGS);
 
-  const imageTextarea = useRef<HTMLTextAreaElement>(null);
-  const videoTextarea = useRef<HTMLTextAreaElement>(null);
+  const imageTextarea = useRef<HTMLDivElement>(null);
+  const videoTextarea = useRef<HTMLDivElement>(null);
 
   const insertTag = useCallback((target: "image" | "video", tag: string) => {
     const setter = target === "image" ? setImagePrompt : setVideoPrompt;
