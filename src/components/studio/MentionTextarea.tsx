@@ -58,6 +58,23 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
     });
   }
 
+  // ảnh đang được nhắc tới trong prompt (theo thứ tự xuất hiện)
+  const tagged = references
+    .map((r) => ({ ref: r, at: value.indexOf(r.tag) }))
+    .filter((x) => x.at !== -1)
+    .sort((a, b) => a.at - b.at)
+    .map((x) => x.ref);
+
+  function removeTag(tag: string) {
+    onChange(
+      value
+        .replace(new RegExp(`\\s?${tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "g"), "")
+        .replace(/[ \t]{2,}/g, " ")
+        .trimStart(),
+    );
+    innerRef.current?.focus();
+  }
+
   return (
     <div className="relative">
       <Textarea
