@@ -348,12 +348,13 @@ function StudioPage() {
                   <Label htmlFor="video-prompt" className="font-display text-base">
                     Prompt video
                   </Label>
-                  <Textarea
+                  <MentionTextarea
                     id="video-prompt"
                     ref={videoTextarea}
                     value={videoPrompt}
-                    onChange={(e) => setVideoPrompt(e.target.value)}
-                    placeholder="Ví dụ: camera dolly chậm quanh @ref_1, sương mù cuộn nhẹ, ánh sáng hoàng hôn…"
+                    onChange={setVideoPrompt}
+                    references={videoRefs}
+                    placeholder="Ví dụ: camera dolly chậm quanh @ref_1, sương mù cuộn nhẹ… gõ @ để chèn ảnh tham chiếu"
                     className="min-h-36 resize-y text-base"
                   />
                   <p className="text-xs text-muted-foreground">
