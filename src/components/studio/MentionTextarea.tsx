@@ -146,6 +146,34 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, Props>(function M
           )}
         </div>
       )}
+
+      {tagged.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted-foreground">Đang tham chiếu:</span>
+          {tagged.map((r) => (
+            <span
+              key={r.id}
+              className="group flex items-center gap-1.5 rounded-full border border-border bg-muted/50 py-1 pl-1 pr-2"
+              title={r.name}
+            >
+              <img
+                src={r.previewUrl}
+                alt={r.name}
+                className="size-6 shrink-0 rounded-full object-cover"
+              />
+              <span className="max-w-32 truncate text-xs font-medium">{r.tag}</span>
+              <button
+                type="button"
+                onClick={() => removeTag(r.tag)}
+                aria-label={`Bỏ ${r.tag} khỏi prompt`}
+                className="text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 });
