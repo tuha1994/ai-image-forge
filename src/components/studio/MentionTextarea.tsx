@@ -9,6 +9,7 @@ type Props = {
   references: ReferenceImage[];
   placeholder?: string;
   className?: string;
+  maxLength?: number;
 };
 
 /**
