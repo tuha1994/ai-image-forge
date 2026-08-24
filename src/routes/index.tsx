@@ -248,12 +248,13 @@ function StudioPage() {
                   <Label htmlFor="image-prompt" className="font-display text-base">
                     Prompt ảnh
                   </Label>
-                  <Textarea
+                  <MentionTextarea
                     id="image-prompt"
                     ref={imageTextarea}
                     value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    placeholder="Ví dụ: studio portrait của một phi hành gia, ánh sáng viền cam, nền tối, chi tiết cao…"
+                    onChange={setImagePrompt}
+                    references={imageRefs}
+                    placeholder="Ví dụ: studio portrait của một phi hành gia, ánh sáng viền cam… gõ @ để chèn ảnh tham chiếu"
                     className="min-h-36 resize-y text-base"
                   />
                 </div>
