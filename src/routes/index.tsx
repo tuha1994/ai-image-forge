@@ -13,7 +13,7 @@ import {
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/studio/MentionTextarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -248,12 +248,13 @@ function StudioPage() {
                   <Label htmlFor="image-prompt" className="font-display text-base">
                     Prompt ảnh
                   </Label>
-                  <Textarea
+                  <MentionTextarea
                     id="image-prompt"
                     ref={imageTextarea}
                     value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    placeholder="Ví dụ: studio portrait của một phi hành gia, ánh sáng viền cam, nền tối, chi tiết cao…"
+                    onChange={setImagePrompt}
+                    references={imageRefs}
+                    placeholder="Ví dụ: studio portrait của một phi hành gia, ánh sáng viền cam… gõ @ để chèn ảnh tham chiếu"
                     className="min-h-36 resize-y text-base"
                   />
                 </div>
@@ -347,12 +348,13 @@ function StudioPage() {
                   <Label htmlFor="video-prompt" className="font-display text-base">
                     Prompt video
                   </Label>
-                  <Textarea
+                  <MentionTextarea
                     id="video-prompt"
                     ref={videoTextarea}
                     value={videoPrompt}
-                    onChange={(e) => setVideoPrompt(e.target.value)}
-                    placeholder="Ví dụ: camera dolly chậm quanh @ref_1, sương mù cuộn nhẹ, ánh sáng hoàng hôn…"
+                    onChange={setVideoPrompt}
+                    references={videoRefs}
+                    placeholder="Ví dụ: camera dolly chậm quanh @ref_1, sương mù cuộn nhẹ… gõ @ để chèn ảnh tham chiếu"
                     className="min-h-36 resize-y text-base"
                   />
                   <p className="text-xs text-muted-foreground">
