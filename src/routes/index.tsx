@@ -164,7 +164,7 @@ function StudioPage() {
     enqueue({
       kind: "image",
       prompt: buildPromptWithTags(imagePrompt.trim(), imageRefs),
-      name: imageName.trim() || undefined,
+      ...(imageName.trim() ? { name: imageName.trim() } : {}),
       references: imageRefs,
       imageSettings,
     });
