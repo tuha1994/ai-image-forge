@@ -17,7 +17,7 @@ export type ExportTarget = "original" | "2k" | "4k";
 
 export type ImageSettings = {
   model: string;
-  aspect: "16:9" | "1:1" | "9:16";
+  aspect: "16:9" | "3:2" | "1:1" | "2:3" | "9:16";
   quality: "low" | "medium" | "high";
   exportRes: ExportTarget;
 };
@@ -54,7 +54,9 @@ export type Job = {
 
 export const ASPECT_TO_SIZE: Record<ImageSettings["aspect"], string> = {
   "16:9": "1536x1024",
+  "3:2": "1536x1024",
   "1:1": "1024x1024",
+  "2:3": "1024x1536",
   "9:16": "1024x1536",
 };
 
