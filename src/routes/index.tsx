@@ -297,7 +297,9 @@ function StudioPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="16:9">16:9 — ngang (mặc định)</SelectItem>
+                        <SelectItem value="3:2">3:2 — ngang</SelectItem>
                         <SelectItem value="1:1">1:1 — vuông</SelectItem>
+                        <SelectItem value="2:3">2:3 — dọc</SelectItem>
                         <SelectItem value="9:16">9:16 — dọc</SelectItem>
                       </SelectContent>
                     </Select>
