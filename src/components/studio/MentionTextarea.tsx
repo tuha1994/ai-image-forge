@@ -18,7 +18,7 @@ type Props = {
  * value stays plain text with the original @tags.
  */
 export const MentionTextarea = forwardRef<HTMLDivElement, Props>(function MentionTextarea(
-  { id, value, onChange, references, placeholder, className },
+  { id, value, onChange, references, placeholder, className, maxLength },
   ref,
 ) {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -175,6 +175,18 @@ export const MentionTextarea = forwardRef<HTMLDivElement, Props>(function Mentio
             "before:pointer-events-none before:text-muted-foreground before:content-[attr(data-placeholder)]",
           className,
         )}
+        onBeforeInput={(e) => {
+          if (!maxLength || !editorRef.current) return;
+          const native = e.nativeEvent as InputEvent;
+          if (!native.inputType?.startsWith("insert")) return;
+          const len = serialize(editorRef.current).length;
+          if (len >= maxLength) {
+            e.preventDefault();
+            return;
+          }
+          const insert = native.data;
+          if (insert && len + insert.length > maxLength) e.preventDefault();
+        }}
         onInput={() => {
           emit();
           syncMention();
@@ -200,7 +212,12 @@ export const MentionTextarea = forwardRef<HTMLDivElement, Props>(function Mentio
         }}
         onPaste={(e) => {
           e.preventDefault();
-          const text = e.clipboardData.getData("text/plain");
+          let text = e.clipboardData.getData("text/plain");
+          if (maxLength && editorRef.current) {
+            const remaining = maxLength - serialize(editorRef.current).length;
+            if (remaining <= 0) return;
+            text = text.slice(0, remaining);
+          }
           document.execCommand("insertText", false, text);
         }}
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}

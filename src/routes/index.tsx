@@ -108,6 +108,7 @@ function StudioPage() {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [filter, setFilter] = useState<"all" | "image" | "video">("all");
   const [imagePrompt, setImagePrompt] = useState("");
+  const [imageName, setImageName] = useState("");
   const [videoPrompt, setVideoPrompt] = useState("");
   const [imageRefs, setImageRefs] = useState<ReferenceImage[]>([]);
   const [videoRefs, setVideoRefs] = useState<ReferenceImage[]>([]);
@@ -163,6 +164,7 @@ function StudioPage() {
     enqueue({
       kind: "image",
       prompt: buildPromptWithTags(imagePrompt.trim(), imageRefs),
+      ...(imageName.trim() ? { name: imageName.trim() } : {}),
       references: imageRefs,
       imageSettings,
     });
@@ -255,9 +257,22 @@ function StudioPage() {
                     onChange={setImagePrompt}
                     references={imageRefs}
                     placeholder="Ví dụ: studio portrait của một phi hành gia, ánh sáng viền cam… gõ @ để chèn ảnh tham chiếu"
-                    className="min-h-36 resize-y text-base"
+                    className="h-44 overflow-y-auto text-base"
+                    maxLength={30000}
                   />
+                  <p className="text-right text-[11px] text-muted-foreground">
+                    {imagePrompt.length.toLocaleString("vi-VN")} / 30.000 ký tự
+                  </p>
                 </div>
+
+                <Field label="Tên ảnh (tuỳ chọn)">
+                  <Input
+                    value={imageName}
+                    onChange={(e) => setImageName(e.target.value)}
+                    placeholder="Ví dụ: abc → tải về sẽ là abc.png"
+                    maxLength={120}
+                  />
+                </Field>
 
                 <ReferenceUploader
                   references={imageRefs}

@@ -124,10 +124,16 @@ export function JobCard({ job, onRetry, onCancel, onRemove }: Props) {
               size="sm"
               className="flex-1"
               onClick={() => {
+                const safeName = (job.name ?? "")
+                  .trim()
+                  .replace(/[\\/:*?"<>|]/g, "_")
+                  .slice(0, 120);
                 if (job.kind === "image") {
-                  void downloadImage(job.resultUrl!, `aurora-image-${job.id}.png`, exportRes);
+                  const base = safeName || `aurora-image-${job.id}`;
+                  void downloadImage(job.resultUrl!, `${base}.png`, exportRes);
                 } else {
-                  downloadVideo(job.resultUrl!, `aurora-video-${job.id}.mp4`);
+                  const base = safeName || `aurora-video-${job.id}`;
+                  downloadVideo(job.resultUrl!, `${base}.mp4`);
                 }
               }}
             >
