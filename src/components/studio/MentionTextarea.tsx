@@ -18,7 +18,7 @@ type Props = {
  * value stays plain text with the original @tags.
  */
 export const MentionTextarea = forwardRef<HTMLDivElement, Props>(function MentionTextarea(
-  { id, value, onChange, references, placeholder, className },
+  { id, value, onChange, references, placeholder, className, maxLength },
   ref,
 ) {
   const editorRef = useRef<HTMLDivElement>(null);

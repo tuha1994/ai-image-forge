@@ -36,6 +36,8 @@ export type Job = {
   id: string;
   kind: JobKind;
   prompt: string;
+  /** Tên tuỳ chọn do người dùng đặt — dùng làm tên file khi tải xuống */
+  name?: string;
   createdAt: number;
   status: JobStatus;
   progress: number;
